@@ -5,13 +5,16 @@ class EmployeeService {
     final _client = Supabase.instance.client;
 
     Future<List<Employee>> getEmployees() async {
-        final response = await _client
+    final response = await _client
         .from('employees')
-        .select()
-        .order('name');
+        .select();
 
-        return (response as List)
-            .map((e) => Employee.fromJson(e))
-            .toList();
+    final employees = (response as List)
+        .map((e) => Employee.fromJson(e))
+        .toList();
+
+    employees.sort((a, b) => a.name.compareTo(b.name));
+
+    return employees;
     }
 }

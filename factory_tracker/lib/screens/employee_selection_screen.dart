@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import '../models/employee.dart';
 import '../services/employee_service.dart';
+import 'date_selection_screen.dart';
 
 class EmployeeSelectionScreen extends StatefulWidget {
   const EmployeeSelectionScreen({super.key});
 
   @override
-  State<EmployeeSelectionScreen> createState() => _EmployeeSelectionScreenState();
+  State<EmployeeSelectionScreen> createState() =>
+      _EmployeeSelectionScreenState();
 }
 
 class _EmployeeSelectionScreenState extends State<EmployeeSelectionScreen> {
@@ -66,29 +68,56 @@ class _EmployeeSelectionScreenState extends State<EmployeeSelectionScreen> {
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    itemCount: _filtered.length,
-                    itemBuilder: (context, index) {
-                      final employee = _filtered[index];
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                        title: Text(
-                          employee.name,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                          ),
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                        const buttonWidth = 160.0;
+                        const spacing = 8.0;
+                        final columns =
+                            (constraints.maxWidth / (buttonWidth + spacing)).floor();
+
+                        return SingleChildScrollView(
+                        padding: const EdgeInsets.all(12),
+                        child: GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: columns,
+                            crossAxisSpacing: spacing,
+                            mainAxisSpacing: spacing,
+                            childAspectRatio: 3,
+                            ),
+                            itemCount: _filtered.length,
+                            itemBuilder: (context, index) {
+                            final employee = _filtered[index];
+                            return ElevatedButton(
+                                onPressed: () {
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                    builder: (_) =>
+                                        DateSelectionScreen(employee: employee),
+                                    ),
+                                );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                ),
+                                ),
+                                child: Text(
+                                employee.name,
+                                style: const TextStyle(fontSize: 15),
+                                overflow: TextOverflow.ellipsis,
+                                ),
+                            );
+                            },
                         ),
-                        subtitle: Text(employee.company),
-                        trailing: const Icon(Icons.arrow_forward_ios),
-                        onTap: () {
-                          // Navigation to entry screen comes next
-                        },
-                      );
+                        );
                     },
-                  ),
-          ),
+                ),
+            ),
         ],
       ),
     );
