@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Factory Tracker Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -415,9 +414,8 @@
 
 <script>
   // ── Config ───────────────────────────────────────────────────────────────
-  const  SUPABASE_URL = 'https://bznpuncahsdafezgpocz.supabase.co';
+const  SUPABASE_URL = 'https://bznpuncahsdafezgpocz.supabase.co';
   const  SUPABASE_KEY = 'sb_publishable_Y03V-I3A3SQ_tzPTx8ZmRQ_U_jC6PAe';
-  
   const { createClient } = supabase;
   const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -460,6 +458,7 @@
         <td>${fmtDate(e.created_at)}</td>
         <td>
           <button class="btn btn-outline btn-sm" onclick="openEmployeeModal('${e.id}','${e.name.replace(/'/g,"\\'")}','${(e.company||'').replace(/'/g,"\\'")}')">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteEmployee('${e.id}','${e.name.replace(/'/g,"\\'")}')">Delete</button>
         </td>
       </tr>
     `).join('');
@@ -502,6 +501,13 @@
     loadEmployees();
   }
 
+  async function deleteEmployee(id, name) {
+    if (!confirm(`Delete employee "${name}"? This cannot be undone.`)) return;
+    const { error } = await db.from('employees').delete().eq('id', id);
+    if (error) { alert('Error deleting employee: ' + error.message); return; }
+    loadEmployees();
+  }
+
   // ── ITEMS ─────────────────────────────────────────────────────────────────
   async function loadItems() {
     const { data, error } = await db.from('items').select('*').order('name');
@@ -520,6 +526,7 @@
         <td><span class="badge ${i.active ? 'badge-active' : 'badge-inactive'}">${i.active ? 'Active' : 'Inactive'}</span></td>
         <td>
           <button class="btn btn-outline btn-sm" onclick="openItemModal('${i.id}','${i.name.replace(/'/g,"\\'")}','${i.rate}','${i.average_per_day}','${i.active}')">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteItem('${i.id}','${i.name.replace(/'/g,"\\'")}')">Delete</button>
         </td>
       </tr>
     `).join('');
@@ -556,6 +563,13 @@
     }
 
     closeItemModal();
+    loadItems();
+  }
+
+  async function deleteItem(id, name) {
+    if (!confirm(`Delete item "${name}"? This cannot be undone.`)) return;
+    const { error } = await db.from('items').delete().eq('id', id);
+    if (error) { alert('Error deleting item: ' + error.message); return; }
     loadItems();
   }
 
