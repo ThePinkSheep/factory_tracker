@@ -1,2 +1,2 @@
 const String supabaseUrl = 'https://bznpuncahsdafezgpocz.supabase.co';
-const String supabaseAnonKey = 'sb_publishable_-w9qMtXHeu-xFmozo6TUMg_jgqpgzIP';
+const String supabaseAnonKey = 'sb_publishable_DF1_h4r_wV2jdpeMcwaTWw_Q4IUabMH';
