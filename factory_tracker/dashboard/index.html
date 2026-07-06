@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Factory Tracker Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+    }
+
+    header {
+      background: #1a73e8;
+      color: white;
+      padding: 16px 32px;
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .tabs {
+      display: flex;
+      background: white;
+      border-bottom: 2px solid #e0e0e0;
+      padding: 0 32px;
+    }
+
+    .tab {
+      padding: 14px 24px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 500;
+      color: #666;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s;
+    }
+
+    .tab:hover { color: #1a73e8; }
+    .tab.active { color: #1a73e8; border-bottom-color: #1a73e8; }
+
+    .content { padding: 32px; max-width: 1200px; margin: 0 auto; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 17px;
+      font-weight: 600;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      background: #f7f8fa;
+      color: #555;
+      font-weight: 600;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafbff; }
+
+    .btn {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: opacity 0.2s;
+    }
+
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: #1a73e8; color: white; }
+    .btn-success { background: #34a853; color: white; }
+    .btn-danger  { background: #ea4335; color: white; }
+    .btn-outline {
+      background: white;
+      color: #1a73e8;
+      border: 1.5px solid #1a73e8;
+    }
+    .btn-sm { padding: 5px 12px; font-size: 13px; }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge-active   { background: #e6f4ea; color: #34a853; }
+    .badge-inactive { background: #fce8e6; color: #ea4335; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: white;
+      border-radius: 12px;
+      padding: 28px;
+      width: 440px;
+      max-width: 95vw;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    }
+
+    .modal h3 {
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+
+    .form-group { margin-bottom: 16px; }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 6px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus { border-color: #1a73e8; }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+
+    /* Payroll */
+    .filters {
+      display: flex;
+      gap: 16px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+
+    .filters .form-group { margin-bottom: 0; min-width: 180px; }
+
+    .total-row td {
+      font-weight: 700;
+      font-size: 15px;
+      background: #f7f8fa;
+      border-top: 2px solid #e0e0e0;
+    }
+
+    .empty {
+      text-align: center;
+      color: #aaa;
+      padding: 40px;
+      font-size: 15px;
+    }
+
+    .loading {
+      text-align: center;
+      color: #888;
+      padding: 30px;
+    }
+
+    .search-bar {
+      margin-bottom: 16px;
+    }
+
+    .search-bar input {
+      max-width: 320px;
+    }
+
+    .csv-btn {
+      margin-left: auto;
+    }
+
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .summary-card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+
+    .summary-card .value {
+      font-size: 26px;
+      font-weight: 700;
+      color: #1a73e8;
+    }
+
+    .summary-card .label {
+      font-size: 13px;
+      color: #888;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<header>Factory Tracker Dashboard</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('employees')">Employees</div>
+  <div class="tab" onclick="switchTab('items')">Items</div>
+  <div class="tab" onclick="switchTab('payroll')">Payroll</div>
+</div>
+
+<div class="content">
+
+  <!-- ── EMPLOYEES ── -->
+  <div id="tab-employees" class="panel active">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Employees</span>
+        <button class="btn btn-primary" onclick="openEmployeeModal()">+ Add Employee</button>
+      </div>
+      <div class="search-bar">
+        <input type="text" placeholder="Search by name or company..." oninput="filterEmployees(this.value)" />
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Company</th>
+            <th>Added</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="employees-body">
+          <tr><td colspan="4" class="loading">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── ITEMS ── -->
+  <div id="tab-items" class="panel">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Items</span>
+        <button class="btn btn-primary" onclick="openItemModal()">+ Add Item</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Rate (RON)</th>
+            <th>Avg / Day</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="items-body">
+          <tr><td colspan="5" class="loading">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── PAYROLL ── -->
+  <div id="tab-payroll" class="panel">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Payroll Report</span>
+        <button class="btn btn-outline csv-btn" onclick="exportCSV()">Export CSV</button>
+      </div>
+
+      <div class="filters">
+        <div class="form-group">
+          <label>Employee</label>
+          <select id="payroll-employee">
+            <option value="">All employees</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>From</label>
+          <input type="date" id="payroll-from" />
+        </div>
+        <div class="form-group">
+          <label>To</label>
+          <input type="date" id="payroll-to" />
+        </div>
+        <button class="btn btn-primary" onclick="loadPayroll()">Search</button>
+      </div>
+
+      <div id="payroll-summary" class="summary-cards" style="display:none"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Work Date</th>
+            <th>Item</th>
+            <th>Quantity</th>
+            <th>Rate (RON)</th>
+            <th>Earned (RON)</th>
+          </tr>
+        </thead>
+        <tbody id="payroll-body">
+          <tr><td colspan="6" class="empty">Select filters and click Search.</td></tr>
+        </tbody>
+        <tfoot id="payroll-foot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Employee Modal ── -->
+<div class="modal-overlay" id="employee-modal">
+  <div class="modal">
+    <h3 id="employee-modal-title">Add Employee</h3>
+    <input type="hidden" id="employee-id" />
+    <div class="form-group">
+      <label>Name</label>
+      <input type="text" id="employee-name" placeholder="Full name" />
+    </div>
+    <div class="form-group">
+      <label>Company</label>
+      <input type="text" id="employee-company" placeholder="Company name" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeEmployeeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEmployee()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Item Modal ── -->
+<div class="modal-overlay" id="item-modal">
+  <div class="modal">
+    <h3 id="item-modal-title">Add Item</h3>
+    <input type="hidden" id="item-id" />
+    <div class="form-group">
+      <label>Name</label>
+      <input type="text" id="item-name" placeholder="Item name" />
+    </div>
+    <div class="form-group">
+      <label>Rate (RON per unit)</label>
+      <input type="number" id="item-rate" placeholder="0.00" step="0.01" min="0" />
+    </div>
+    <div class="form-group">
+      <label>Average per Day</label>
+      <input type="number" id="item-avg" placeholder="0" min="0" />
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="item-active">
+        <option value="true">Active</option>
+        <option value="false">Inactive</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeItemModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveItem()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Config ───────────────────────────────────────────────────────────────
+  const { createClient } = supabase;
+  const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  let allEmployees = [];
+  let payrollData  = [];
+
+  // ── Tabs ──────────────────────────────────────────────────────────────────
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', ['employees','items','payroll'][i] === name);
+    });
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function fmt(n)    { return parseFloat(n).toFixed(2); }
+  function fmtDate(d){ return d ? d.split('T')[0].split('-').reverse().join('/') : '-'; }
+
+  // ── EMPLOYEES ─────────────────────────────────────────────────────────────
+  async function loadEmployees() {
+    const { data, error } = await db.from('employees').select('*').order('name');
+    if (error) { console.error(error); return; }
+    allEmployees = data;
+    renderEmployees(data);
+    populateEmployeeSelect(data);
+  }
+
+  function renderEmployees(list) {
+    const tbody = document.getElementById('employees-body');
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty">No employees found.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map(e => `
+      <tr>
+        <td><strong>${e.name}</strong></td>
+        <td>${e.company || '-'}</td>
+        <td>${fmtDate(e.created_at)}</td>
+        <td>
+          <button class="btn btn-outline btn-sm" onclick="openEmployeeModal('${e.id}','${e.name.replace(/'/g,"\\'")}','${(e.company||'').replace(/'/g,"\\'")}')">Edit</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function filterEmployees(q) {
+    const filtered = allEmployees.filter(e =>
+      e.name.toLowerCase().includes(q.toLowerCase()) ||
+      (e.company || '').toLowerCase().includes(q.toLowerCase())
+    );
+    renderEmployees(filtered);
+  }
+
+  function openEmployeeModal(id='', name='', company='') {
+    document.getElementById('employee-modal-title').textContent = id ? 'Edit Employee' : 'Add Employee';
+    document.getElementById('employee-id').value      = id;
+    document.getElementById('employee-name').value    = name;
+    document.getElementById('employee-company').value = company;
+    document.getElementById('employee-modal').classList.add('open');
+  }
+
+  function closeEmployeeModal() {
+    document.getElementById('employee-modal').classList.remove('open');
+  }
+
+  async function saveEmployee() {
+    const id      = document.getElementById('employee-id').value;
+    const name    = document.getElementById('employee-name').value.trim();
+    const company = document.getElementById('employee-company').value.trim();
+
+    if (!name) { alert('Name is required.'); return; }
+
+    if (id) {
+      await db.from('employees').update({ name, company }).eq('id', id);
+    } else {
+      await db.from('employees').insert({ name, company });
+    }
+
+    closeEmployeeModal();
+    loadEmployees();
+  }
+
+  // ── ITEMS ─────────────────────────────────────────────────────────────────
+  async function loadItems() {
+    const { data, error } = await db.from('items').select('*').order('name');
+    if (error) { console.error(error); return; }
+
+    const tbody = document.getElementById('items-body');
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty">No items found.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(i => `
+      <tr>
+        <td><strong>${i.name}</strong></td>
+        <td>${fmt(i.rate)}</td>
+        <td>${i.average_per_day ?? '-'}</td>
+        <td><span class="badge ${i.active ? 'badge-active' : 'badge-inactive'}">${i.active ? 'Active' : 'Inactive'}</span></td>
+        <td>
+          <button class="btn btn-outline btn-sm" onclick="openItemModal('${i.id}','${i.name.replace(/'/g,"\\'")}','${i.rate}','${i.average_per_day}','${i.active}')">Edit</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function openItemModal(id='', name='', rate='', avg='', active='true') {
+    document.getElementById('item-modal-title').textContent = id ? 'Edit Item' : 'Add Item';
+    document.getElementById('item-id').value     = id;
+    document.getElementById('item-name').value   = name;
+    document.getElementById('item-rate').value   = rate;
+    document.getElementById('item-avg').value    = avg;
+    document.getElementById('item-active').value = active.toString();
+    document.getElementById('item-modal').classList.add('open');
+  }
+
+  function closeItemModal() {
+    document.getElementById('item-modal').classList.remove('open');
+  }
+
+  async function saveItem() {
+    const id     = document.getElementById('item-id').value;
+    const name   = document.getElementById('item-name').value.trim();
+    const rate   = parseFloat(document.getElementById('item-rate').value);
+    const avg    = parseInt(document.getElementById('item-avg').value) || 0;
+    const active = document.getElementById('item-active').value === 'true';
+
+    if (!name)      { alert('Name is required.'); return; }
+    if (isNaN(rate)){ alert('Rate must be a number.'); return; }
+
+    if (id) {
+      await db.from('items').update({ name, rate, average_per_day: avg, active }).eq('id', id);
+    } else {
+      await db.from('items').insert({ name, rate, average_per_day: avg, active });
+    }
+
+    closeItemModal();
+    loadItems();
+  }
+
+  // ── PAYROLL ───────────────────────────────────────────────────────────────
+  function populateEmployeeSelect(employees) {
+    const sel = document.getElementById('payroll-employee');
+    sel.innerHTML = '<option value="">All employees</option>' +
+      employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+  }
+
+  async function loadPayroll() {
+    const employeeId = document.getElementById('payroll-employee').value;
+    const from       = document.getElementById('payroll-from').value;
+    const to         = document.getElementById('payroll-to').value;
+
+    const tbody = document.getElementById('payroll-body');
+    tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading...</td></tr>';
+
+    let query = db.from('submissions').select(`
+      work_date,
+      employees ( name, company ),
+      submission_lines (
+        quantity,
+        items ( name, rate )
+      )
+    `).order('work_date', { ascending: false });
+
+    if (employeeId) query = query.eq('employee_id', employeeId);
+    if (from)       query = query.gte('work_date', from);
+    if (to)         query = query.lte('work_date', to);
+
+    const { data, error } = await query;
+    if (error) { console.error(error); tbody.innerHTML = '<tr><td colspan="6" class="empty">Error loading data.</td></tr>'; return; }
+
+    // Flatten rows
+    payrollData = [];
+    data.forEach(sub => {
+      (sub.submission_lines || []).forEach(line => {
+        payrollData.push({
+          employee: sub.employees?.name || '-',
+          company:  sub.employees?.company || '-',
+          date:     sub.work_date,
+          item:     line.items?.name || '-',
+          quantity: line.quantity,
+          rate:     line.items?.rate || 0,
+          earned:   line.quantity * (line.items?.rate || 0),
+        });
+      });
+    });
+
+    renderPayroll();
+  }
+
+  function renderPayroll() {
+    const tbody = document.getElementById('payroll-body');
+    const tfoot = document.getElementById('payroll-foot');
+    const summary = document.getElementById('payroll-summary');
+
+    if (!payrollData.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">No data for selected filters.</td></tr>';
+      tfoot.innerHTML = '';
+      summary.style.display = 'none';
+      return;
+    }
+
+    tbody.innerHTML = payrollData.map(r => `
+      <tr>
+        <td>${r.employee}</td>
+        <td>${fmtDate(r.date)}</td>
+        <td>${r.item}</td>
+        <td>${r.quantity}</td>
+        <td>${fmt(r.rate)}</td>
+        <td><strong>${fmt(r.earned)}</strong></td>
+      </tr>
+    `).join('');
+
+    const total = payrollData.reduce((s, r) => s + r.earned, 0);
+    const totalQty = payrollData.reduce((s, r) => s + r.quantity, 0);
+    const uniqueEmployees = new Set(payrollData.map(r => r.employee)).size;
+
+    tfoot.innerHTML = `
+      <tr class="total-row">
+        <td colspan="3">Total</td>
+        <td>${totalQty}</td>
+        <td></td>
+        <td>${fmt(total)} RON</td>
+      </tr>
+    `;
+
+    summary.style.display = 'grid';
+    summary.innerHTML = `
+      <div class="summary-card">
+        <div class="value">${uniqueEmployees}</div>
+        <div class="label">Employees</div>
+      </div>
+      <div class="summary-card">
+        <div class="value">${payrollData.length}</div>
+        <div class="label">Line Items</div>
+      </div>
+      <div class="summary-card">
+        <div class="value">${totalQty}</div>
+        <div class="label">Total Units</div>
+      </div>
+      <div class="summary-card">
+        <div class="value">${fmt(total)}</div>
+        <div class="label">Total Earned (RON)</div>
+      </div>
+    `;
+  }
+
+  function exportCSV() {
+    if (!payrollData.length) { alert('No data to export.'); return; }
+
+    const headers = ['Employee','Company','Work Date','Item','Quantity','Rate (RON)','Earned (RON)'];
+    const rows = payrollData.map(r => [
+      r.employee, r.company, r.date, r.item, r.quantity, fmt(r.rate), fmt(r.earned)
+    ]);
+
+    const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = 'payroll_export.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ── Set default date range (current month) ───────────────────────────────
+  function setDefaultDates() {
+    const now   = new Date();
+    const from  = new Date(now.getFullYear(), now.getMonth(), 1);
+    const to    = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    document.getElementById('payroll-from').value = from.toISOString().split('T')[0];
+    document.getElementById('payroll-to').value   = to.toISOString().split('T')[0];
+  }
+
+  // ── Init ─────────────────────────────────────────────────────────────────
+  setDefaultDates();
+  loadEmployees();
+  loadItems();
+</script>
+</body>
+</html>
