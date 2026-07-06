@@ -35,7 +35,7 @@ migrate_working_dir/
 
 
 lib/config.dart
-dashboard/config.js
+
 
 # Symbolication related
 app.*.symbols
